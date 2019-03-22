@@ -1,0 +1,29 @@
+﻿  RawDataGenerator.cpp
+  main.cpp
+c:\users\tony.zhao2\documents\visual studio 2015\projects\barneshut\barneshut\BHNode.h(31): warning C4018: '<': signed/unsigned mismatch
+  c:\users\tony.zhao2\documents\visual studio 2015\projects\barneshut\barneshut\BHNode.h(29): note: while compiling class template member function 'void BHNode<MY_TYPE,3>::Reset(void)'
+  main.cpp(19): note: see reference to function template instantiation 'void BHNode<MY_TYPE,3>::Reset(void)' being compiled
+  main.cpp(14): note: see reference to class template instantiation 'BHNode<MY_TYPE,3>' being compiled
+c:\users\tony.zhao2\documents\visual studio 2015\projects\barneshut\barneshut\BHNode.h(160): warning C4018: '<': signed/unsigned mismatch
+  c:\users\tony.zhao2\documents\visual studio 2015\projects\barneshut\barneshut\BHNode.h(154): note: while compiling class template member function 'void BHNode<MY_TYPE,3>::GenerateBoundary(void)'
+  c:\users\tony.zhao2\documents\visual studio 2015\projects\barneshut\barneshut\BHNode.h(49): note: see reference to function template instantiation 'void BHNode<MY_TYPE,3>::GenerateBoundary(void)' being compiled
+c:\users\tony.zhao2\documents\visual studio 2015\projects\barneshut\barneshut\BHNode.h(128): warning C4018: '<': signed/unsigned mismatch
+  c:\users\tony.zhao2\documents\visual studio 2015\projects\barneshut\barneshut\BHNode.h(107): note: while compiling class template member function 'void BHNode<MY_TYPE,3>::SetParams(std::vector<unsigned int,std::allocator<_Ty>> &,DATA_TYPE *,DATA_TYPE *)'
+          with
+          [
+              _Ty=unsigned int,
+              DATA_TYPE=MY_TYPE
+          ]
+  c:\users\tony.zhao2\documents\visual studio 2015\projects\barneshut\barneshut\BHNode.h(53): note: see reference to function template instantiation 'void BHNode<MY_TYPE,3>::SetParams(std::vector<unsigned int,std::allocator<_Ty>> &,DATA_TYPE *,DATA_TYPE *)' being compiled
+          with
+          [
+              _Ty=unsigned int,
+              DATA_TYPE=MY_TYPE
+          ]
+  Generating code
+  7 of 250 functions ( 2.8%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  BarnesHut.vcxproj -> C:\Users\tony.zhao2\documents\visual studio 2015\Projects\BarnesHut\Release\BarnesHut.exe
+  BarnesHut.vcxproj -> C:\Users\tony.zhao2\documents\visual studio 2015\Projects\BarnesHut\Release\BarnesHut.pdb (Full PDB)
