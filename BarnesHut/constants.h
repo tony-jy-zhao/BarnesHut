@@ -4,11 +4,11 @@
 
 #define MY_DIM 3
 typedef float MY_TYPE;
-const int NUMOFIONS_ = 2;
-const int BOXSIDE_ = 50;
+const int ION_NUM = 2000;
+const int BOX_SIDE_LENGTH = 50;
 
 template <typename T>
-inline void printOutArray(char* beginWords, T* arr, int arrayLength) {
+inline void printArray(char* beginWords, T* arr, int arrayLength) {
 	std::cout << beginWords << " ";
 	for (int i = 0; i < arrayLength; i++)
 	{

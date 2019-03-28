@@ -1,190 +1,203 @@
 #pragma once
 #include <vector>
-#include <numeric>
+#include <assert.h>
 
-#define _THRESHOLD2_ 0.001
-#define _MAXDEPTH_ 100
+#define THRESHOLD2 0.0
+#define MAX_DEPTH 10
 
 // Barnes-Hut Tree Node
-template <class DATA_TYPE, unsigned int DIM>
+template <class T, int D>
 class BHNode
 {
 public:
-	BHNode(unsigned int depth)
-	{
-		HasChildren = false;
-		Depth = depth;
-		TotalCharge = 0;
-		for (int i = 0; i < DIM; i++)
-			ChargeWeightedMeanPos[i] = 0;
+    BHNode(int depth, const int allIonNum, const T* coordinates, const int* charges, std::vector<int>& ionsInNode, T* minPos, T* maxPos): 
+        c_orthantNum_([]()->int { int orth = 1;
+            for (int d = 0; d < D; d++) orth *= 2; return orth; }()),
+        c_depth_(depth),
+        totChargeInNode_(0),
+        childNodes_(std::vector<BHNode*>(this->c_orthantNum_, nullptr)),
+        c_allIonNum_(allIonNum),
+        c_allCoordinates_(coordinates),
+        c_allCharges_(charges),
+        ionsInNode_(ionsInNode) {
+#ifdef BHNODE_DEBUG
+            for (int d = 0; d < D; d++) {
+                assert(chargeWeightedMeanPos_[d] == 0);
+        }
+            if (D == 2) {
+                assert(orthantNum_ == 4);
+            }
+            else if (D == 3) {
+                assert(orthantNum_ == 8);
+            }
+#endif // BHNODE_DEBUG
 
-		OrthantNum = 1;
-		for (size_t i = 0; i < DIM; i++)
-			OrthantNum *= 2;  //4 orthants in 2D; 8 orthants in 3D
-		ChildNodes = std::vector<BHNode*>(OrthantNum, nullptr);
+        T accPos[D] = {0};
+        for (int d = 0; d < D; d++)
+        {
+            chargeWeightedMeanPos_[d] = 0;
+            minPos_[d] = minPos[d];
+            maxPos_[d] = maxPos[d];
+        }
+
+        for (int ionIndex : ionsInNode_)
+        {
+            totChargeInNode_ += c_allCharges_[ionIndex];
+            for (int d = 0; d < D; d++) {
+                accPos[d] += c_allCharges_[ionIndex] * c_allCoordinates_[ionIndex*D + d];
+            }
+        }
+
+#ifdef BHNODE_DEBUG
+        assert(totChargeInNode_ > 0);
+#endif // BHNODE_DEBUG
+        for (int d = 0; d < D; d++) {
+            chargeWeightedMeanPos_[d] = accPos[d] / totChargeInNode_; // TODO: 0 check
+        }
+        if (ionsInNode_.size() > 1 && c_depth_ < MAX_DEPTH) {
+            GenerateChildNodes();
+        }
 	};
 
-	~BHNode() {};
+	~BHNode()
+    {
+        for (auto cn: childNodes_) {
+            if (cn != nullptr) {
+                delete cn;
+            }
+        }
+    };
 
-	void Reset() {
-		IonsInNode.clear();
-		for (int i = 0; i < ChildNodes.size(); i++) {
-			if (ChildNodes[i] != nullptr)
-			{
-				ChildNodes[i]->Reset();
-				delete ChildNodes[i];
-			}
-		}
-		ChildNodes.clear();
-		HasChildren = false;
-	};
+    void GenerateChildNodes()
+    {
+        T midPos[D] = {0};
+        for (int d = 0; d < D; d++) {
+            midPos[d] = (minPos_[d] + maxPos_[d]) / 2;
+        }
 
-	// This should be the entry point of root
-	void ImportRawData(unsigned int numOfIons, void* coords, void* charges) {
-		// is it good practice to use pointer pointing to remote places
-		NUMOFIONS_ = numOfIons;
-		COORDS_ = (DATA_TYPE*)(coords);
-		CHARGES_ = (int*)(charges);
+        auto dividedIons = std::vector<std::vector<int>>(c_orthantNum_);
 
-		GenerateBoundary();
+        for (auto ionIndex : ionsInNode_) {
+            T ionPos[D];
+            for (int d = 0; d < D; d++) {
+                ionPos[d] = c_allCoordinates_[ionIndex * D + d];
+            }
 
-		std::vector<unsigned int> tmp(numOfIons);
-		std::iota(std::begin(tmp), std::end(tmp), 0);
-		SetParams(tmp, MinPos, MaxPos);
-	};
+            int orthant = calculateOrthant(ionPos, midPos);
+            dividedIons[orthant].emplace_back(ionIndex);
+        }
 
-	void CalculateElectricField(DATA_TYPE* targetPos, DATA_TYPE* efieldVector)
-	{
-		DATA_TYPE orthantSize2 = (MinPos[0] - MaxPos[0]) * (MinPos[0] - MaxPos[0]);
-		DATA_TYPE distance2 = 0;
-		DATA_TYPE distanceVector[DIM];
+        for (int orthant = 0; orthant < c_orthantNum_; orthant++) {
+            if (dividedIons[orthant].size()>0)
+            {
+                T minPos[D];
+                T maxPos[D];
+                calculateMinMaxPos(orthant, minPos, maxPos);
+                childNodes_[orthant] = new BHNode(c_depth_+1, c_allIonNum_, c_allCoordinates_, c_allCharges_, dividedIons[orthant], minPos, maxPos);
+            }
+        }
+    };
 
-		for (size_t d = 0; d < DIM; d++) {
-			distanceVector[d] = targetPos[d] - ChargeWeightedMeanPos[d];
-			distance2 += distanceVector[d] * distanceVector[d];
-		}
-		if (orthantSize2 / distance2 < _THRESHOLD2_)	//TODO: _THRESHOLD2_ should be defined; // this is the case when the orthant is too far away
-		{
-			DATA_TYPE distance1 = sqrt(distance2);
-			for (size_t d = 0; d < DIM; d++)
-				efieldVector[d] += TotalCharge/distance2*distanceVector[d]/distance1;
-		}
-		else {
-			for (BHNode* childNode: ChildNodes) {
-				if (childNode != nullptr)
-					childNode->CalculateElectricField(targetPos, efieldVector);
-			}
-		}
-	};
+    void CalculateElectricField(T* targetPos, T* efieldVector)
+    {
+        T orthantSize2 = (minPos_[0] - maxPos_[0]) * (minPos_[0] - maxPos_[0]);
+        T distance2 = 0;
+        T distanceVector[D];
 
-	void GenerateChildNodes()
-	{		
-		DATA_TYPE MidPos[DIM];
-		for (size_t d = 0; d < DIM; d++)
-			MidPos[d] = (MinPos[d] + MaxPos[d])/2;
+        for (size_t d = 0; d < D; d++) {
+            distanceVector[d] = targetPos[d] - chargeWeightedMeanPos_[d];
+            distance2 += distanceVector[d] * distanceVector[d];
+        }
+        if (ionsInNode_.size()==1 || orthantSize2 / distance2 < THRESHOLD2) {
+            T distance1 = sqrt(distance2);
+            for (size_t d = 0; d < D; d++) {
+                efieldVector[d] += totChargeInNode_ / distance2 * distanceVector[d] / distance1;
+            }
+        }
+        else {
+            for (BHNode* childNode : childNodes_) {
+                if (childNode != nullptr) {
+                    childNode->CalculateElectricField(targetPos, efieldVector);
+                }
+            }
+        }
+    };
 
-		auto dividedIons = std::vector<std::vector<unsigned int>>(OrthantNum);
-		
-		for (auto ionIndex: IonsInNode) {
-			DATA_TYPE ionPos[DIM];
-			for (size_t d = 0; d < DIM; d++)
-				ionPos[d] = COORDS_[ionIndex * DIM + d];
-
-			int orthant = CalRelativeOrthant(ionPos, MidPos); // can use binary to implement, to get rid of dimension dependence		
-			dividedIons[orthant].emplace_back(ionIndex);
-		}
-
-		for (int orthant = 0; orthant < OrthantNum; orthant++) {
-			ChildNodes[orthant] = new BHNode(Depth + 1);
-
-			DATA_TYPE minPos[DIM];
-			DATA_TYPE maxPos[DIM];
-			CalculateMinMaxPos(orthant, minPos, maxPos);
-			ChildNodes[orthant]->SetParams(dividedIons[orthant], minPos, maxPos);
-		}
-	};
-
-	void SetParams(std::vector<unsigned int>& ionsInNode, DATA_TYPE* minPos, DATA_TYPE* maxPos) {
-		IonsInNode.swap(ionsInNode);
-		DATA_TYPE accPos[DIM];
-		for (int i = 0; i < DIM; i++)
-		{
-			MinPos[i] = minPos[i];
-			MaxPos[i] = maxPos[i];
-			accPos[i] = 0;
-		}
-		TotalCharge = 0;
-		
-		for (int ionIndex: IonsInNode)
-		{
-			TotalCharge += CHARGES_[ionIndex];
-			for (unsigned int d = 0; d < DIM; d++)
-				accPos[d] += CHARGES_[ionIndex] * COORDS_[ionIndex*DIM+d];
-		}
-		
-		for (size_t d = 0; d < DIM; d++)
-			ChargeWeightedMeanPos[d] = accPos[d] / TotalCharge; // TODO: 0 check
-
-		if (IonsInNode.size() > 1 && Depth < MAX_DEPTH)
-			GenerateChildNodes();
-	};
+    void PrintBHTree() {
+        using namespace std;
+        cout << "Depth=" << c_depth_ << " ";
+        cout << "TotalCharge=" << totChargeInNode_ << " ";
+        cout << "HasChildren=" << HasChildren << " ";
+        printArray("MinPos=", minPos_, D);
+        printArray("MaxPos=", maxPos_, D);
+        printArray("ChargeWeightedMeanPos=", chargeWeightedMeanPos_, D);
+        printArray("IonsInNode=", ionsInNode_, ionsInNode_.size());
+        for (BHNode* childNode : childNodes_)
+        {
+            if (childNode != nullptr) {
+                childNode->PrintBHTree();
+            }
+        }
+    }
 private:
-	int CalRelativeOrthant(DATA_TYPE* target, DATA_TYPE* center) {
+	int calculateOrthant(T* target, T* center) {
 		int orthant = 0;
-		for (size_t d = 0; d < DIM; d++) {
-			orthant <<= 1;
-			if (target[d] < center[d])
-				orthant += 0;
-			else
-				orthant += 1;
-		}
+        for (size_t d = 0; d < D; d++) {
+            orthant <<= 1;
+            if (target[d] < center[d]) {
+                orthant += 0;
+            }
+            else {
+                orthant += 1;
+            }
+        }
+#ifdef BHNODE_DEBUG
+        assert(orthant >= 0 && orthant < c_orthantNum_);
+#endif // BHNODE_DEBUG
+
 		return orthant;
 	};
 
-	void CalculateMinMaxPos(int orthant, DATA_TYPE* minPos, DATA_TYPE* maxPos) {
-		for (int d = DIM-1; d >= 0; --d)
+	void calculateMinMaxPos(int orthant, T* minPos, T* maxPos) {
+		for (int d = D-1; d >= 0; --d)
 		{
 			int cmp = orthant & 1;
-			minPos[d] = cmp == 0 ? MinPos[d] : (MinPos[d] + MaxPos[d]) / 2;
-			maxPos[d] = cmp == 0 ? (MinPos[d] + MaxPos[d]) / 2 : MaxPos[d];
+			minPos[d] = cmp == 0 ? minPos_[d] : (minPos_[d] + maxPos_[d]) / 2;
+			maxPos[d] = cmp == 0 ? (minPos_[d] + maxPos_[d]) / 2 : maxPos_[d];
 			orthant >>= 1;
 		}
 	};
 
-	void GenerateBoundary() {
-		for (int d = 0; d < DIM; d++) {
-			MinPos[d] = (MY_TYPE)INT_MAX;
-			MaxPos[d] = (MY_TYPE)INT_MIN;
+	void generateBoundary() {
+		for (int d = 0; d < D; d++) {
+			minPos_[d] = (MY_TYPE)BOX_SIDE_LENGTH;
+			maxPos_[d] = (MY_TYPE)(-1);
 		}
 
-		for (size_t i = 0; i < NUMOFIONS_; i++)
+		for (size_t i = 0; i < c_allIonNum_; i++)
 		{
-			for (size_t d = 0; d < DIM; d++)
+			for (size_t d = 0; d < D; d++)
 			{
-				MinPos[d] = COORDS_[i*DIM + d] < MinPos[d] ? COORDS_[i*DIM + d] : MinPos[d];
-				MaxPos[d] = COORDS_[i*DIM + d] > MaxPos[d] ? COORDS_[i*DIM + d] : MaxPos[d];
-				// probably there is one ion just sit at the corner, which will cause problem.
-				// but that's unlikely
+				minPos_[d] = c_allCoordinates_[i*D + d] < minPos_[d] ? c_allCoordinates_[i*D + d] : minPos_[d];
+				maxPos_[d] = c_allCoordinates_[i*D + d] > maxPos_[d] ? c_allCoordinates_[i*D + d] : maxPos_[d];
 			}
 		}
 	};
 
-	unsigned int TotalCharge;
-	DATA_TYPE ChargeWeightedMeanPos[DIM];
-	std::vector<unsigned int> IonsInNode;
-	std::vector<BHNode*> ChildNodes;
-	DATA_TYPE MinPos[DIM];
-	DATA_TYPE MaxPos[DIM];
-	static DATA_TYPE* COORDS_;
-	static int* CHARGES_;
-	static int NUMOFIONS_;
-	static int OrthantNum;
-	bool HasChildren;
-	unsigned int Depth;
-	const int MAX_DEPTH = _MAXDEPTH_;
+    const int c_orthantNum_;
+    const int c_allIonNum_;
+    const T* c_allCoordinates_;
+    const int* c_allCharges_;
+    const int c_depth_;
+
+	int totChargeInNode_;
+	T chargeWeightedMeanPos_[D];
+	std::vector<int> ionsInNode_;
+	std::vector<BHNode*> childNodes_;
+	T minPos_[D];
+	T maxPos_[D];
 };
 
-template <class DATA_TYPE, unsigned int DIM> DATA_TYPE* BHNode<DATA_TYPE, DIM>::COORDS_=NULL;
-template <class DATA_TYPE, unsigned int DIM> int* BHNode<DATA_TYPE, DIM>::CHARGES_ = NULL;
-template <class DATA_TYPE, unsigned int DIM> int BHNode<DATA_TYPE, DIM>::NUMOFIONS_ = 0;
-template <class DATA_TYPE, unsigned int DIM> int BHNode<DATA_TYPE, DIM>::OrthantNum = 0;
+
+// if coordinates_ is static, then the following line should be added
+//template <class T, unsigned int D> T* BHNode<T, D>::coordinates_ = NULL;

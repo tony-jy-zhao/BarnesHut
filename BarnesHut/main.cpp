@@ -1,25 +1,24 @@
-#include "RawDataGenerator.h"
+#include "DataGenerator.h"
 #include "BHNode.h"
 #include <iostream>
 
 void main() {
-	int NumOfIons = NUMOFIONS_;
-	RawDataGenerator rawDataGenerator(NumOfIons, MY_DIM);
+	DataGenerator dg(ION_NUM, MY_DIM);
 	//MY_TYPE aPoint[MY_DIM] = {3,3,3};
 	//rawDataGenerator.GenerateAllAtAPoint(aPoint);
-	rawDataGenerator.GenerateRandom();
+	dg.generateRandom();
 
-	MY_TYPE tarPos[MY_DIM] = { -12.5, 2.5, 2.5 };
+	MY_TYPE tarPos[MY_DIM];
 
-	BHNode<MY_TYPE, MY_DIM>* root = new BHNode<MY_TYPE, MY_DIM>(0);
-	root->ImportRawData(NumOfIons, rawDataGenerator._coords, rawDataGenerator._charges);
-
+	BHNode<MY_TYPE, MY_DIM>* root = new BHNode<MY_TYPE, MY_DIM>
+        (0,ION_NUM,dg._coordinates,dg._charges, dg._ionIndices,dg._minPos,dg._maxPos);
+	
 	MY_TYPE tarElectricField[MY_DIM] = {};
 	root->CalculateElectricField(tarPos, tarElectricField);
-	root->Reset();
-	printOutArray<MY_TYPE>("No BF", tarElectricField, MY_DIM);
+	printArray<MY_TYPE>("BH", tarElectricField, MY_DIM);
 
 	MY_TYPE tarElectricFieldBF[MY_DIM] = {};
-	rawDataGenerator.CalculateElectricFieldBF(tarPos, tarElectricFieldBF);
-	printOutArray<MY_TYPE>("BF", tarElectricFieldBF, MY_DIM);
+	dg.calculateElectricFieldBF(tarPos, tarElectricFieldBF);
+	printArray<MY_TYPE>("BF", tarElectricFieldBF, MY_DIM);
+    delete root;
 }
