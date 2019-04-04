@@ -2,8 +2,8 @@
 #include <vector>
 #include <assert.h>
 
-#define THRESHOLD2 0.0
-#define MAX_DEPTH 10
+#define THRESHOLD2 (-1)
+#define MAX_DEPTH (INT_MAX)
 
 // Barnes-Hut Tree Node
 template <class T, int D>
@@ -98,30 +98,36 @@ public:
         }
     };
 
-    void CalculateElectricField(T* targetPos, T* efieldVector)
-    {
-        T orthantSize2 = (minPos_[0] - maxPos_[0]) * (minPos_[0] - maxPos_[0]);
-        T distance2 = 0;
-        T distanceVector[D];
+	void CalculateElectricField(int tarIon, T* efieldVector) {
+		const T* targetPos = &(c_allCoordinates_[tarIon*MY_DIM]);
 
-        for (size_t d = 0; d < D; d++) {
-            distanceVector[d] = targetPos[d] - chargeWeightedMeanPos_[d];
-            distance2 += distanceVector[d] * distanceVector[d];
-        }
-        if (ionsInNode_.size()==1 || orthantSize2 / distance2 < THRESHOLD2) {
-            T distance1 = sqrt(distance2);
-            for (size_t d = 0; d < D; d++) {
-                efieldVector[d] += totChargeInNode_ / distance2 * distanceVector[d] / distance1;
-            }
-        }
-        else {
-            for (BHNode* childNode : childNodes_) {
-                if (childNode != nullptr) {
-                    childNode->CalculateElectricField(targetPos, efieldVector);
-                }
-            }
-        }
-    };
+		T orthantSize2 = (minPos_[0] - maxPos_[0]) * (minPos_[0] - maxPos_[0]);
+		T distance2 = 0;
+		T distanceVector[D];
+
+		for (int d = 0; d < D; d++) {
+			distanceVector[d] = targetPos[d] - chargeWeightedMeanPos_[d];
+			distance2 += distanceVector[d] * distanceVector[d];
+		}
+
+		if (distance2 == 0) {
+			return;
+		}
+
+		if (ionsInNode_.size() == 1 || orthantSize2 / distance2 < THRESHOLD2) {
+			T distance1 = sqrt(distance2);
+			for (int d = 0; d < D; d++) {
+				efieldVector[d] += totChargeInNode_ / distance2 * distanceVector[d] / distance1;
+			}
+		}
+		else {
+			for (BHNode* childNode : childNodes_) {
+				if (childNode != nullptr) {
+					childNode->CalculateElectricField(tarIon, efieldVector);
+				}
+			}
+		}
+	};
 
     void PrintBHTree() {
         using namespace std;

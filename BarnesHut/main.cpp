@@ -1,24 +1,41 @@
-#include "DataGenerator.h"
-#include "BHNode.h"
 #include <iostream>
+#include "IonsGenerator.h"
+#include "BHNode.h"
+#include "TimeDuration.h"
 
 void main() {
-	DataGenerator dg(ION_NUM, MY_DIM);
-	//MY_TYPE aPoint[MY_DIM] = {3,3,3};
-	//rawDataGenerator.GenerateAllAtAPoint(aPoint);
-	dg.generateRandom();
+	IonsGenerator ig(ION_NUM, MY_DIM);
+	ig.generateRandom();
 
+	int tarIon = rand() % ION_NUM;
 	MY_TYPE tarPos[MY_DIM];
+	for (int d = 0; d < MY_DIM; d++) {
+		tarPos[d] = ig._coordinates[tarIon*MY_DIM + d];
+	}
 
-	BHNode<MY_TYPE, MY_DIM>* root = new BHNode<MY_TYPE, MY_DIM>
-        (0,ION_NUM,dg._coordinates,dg._charges, dg._ionIndices,dg._minPos,dg._maxPos);
+	double t1, t2;
+	TimeDuration td(1);
 	
-	MY_TYPE tarElectricField[MY_DIM] = {};
-	root->CalculateElectricField(tarPos, tarElectricField);
-	printArray<MY_TYPE>("BH", tarElectricField, MY_DIM);
+	MY_TYPE reElectricFieldsBF[MY_DIM * ION_NUM];
+	MY_TYPE reElectricFieldsBH[MY_DIM * ION_NUM];
+	t1 = td.calculateTime([&]() {
+		ig.calculateEveryElectricFieldsBF(reElectricFieldsBF);
+		});
 
-	MY_TYPE tarElectricFieldBF[MY_DIM] = {};
-	dg.calculateElectricFieldBF(tarPos, tarElectricFieldBF);
-	printArray<MY_TYPE>("BF", tarElectricFieldBF, MY_DIM);
-    delete root;
+	t2 = td.calculateTime([&]() {
+		BHNode<MY_TYPE, MY_DIM>* root = new BHNode<MY_TYPE, MY_DIM>
+			(0, ION_NUM, ig._coordinates, ig._charges, ig._ionIndices, ig._minPos, ig._maxPos);
+
+		for (int i = 0; i < ION_NUM; i++) {
+			root->CalculateElectricField(i, &(reElectricFieldsBH[i*MY_DIM]));
+		}
+		delete root;
+	});
+
+	std::cout << t1 << std::endl << t2 << std::endl;
+
+	// check calculationError
+	for (int d = 0; d < MY_DIM; d++) {
+//		fabs(tarElectricField[d] - tarElectricFieldBF[d]);
+	}
 }

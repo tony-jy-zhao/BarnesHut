@@ -124,11 +124,13 @@
   <ItemGroup>
     <ClInclude Include="BHNode.h" />
     <ClInclude Include="constants.h" />
-    <ClInclude Include="DataGenerator.h" />
+    <ClInclude Include="IonsGenerator.h" />
+    <ClInclude Include="TimeDuration.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="DataGenerator.cpp" />
+    <ClCompile Include="IonsGenerator.cpp" />
+    <ClCompile Include="TimeDuration.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
