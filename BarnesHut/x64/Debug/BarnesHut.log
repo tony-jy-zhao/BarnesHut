@@ -1,5 +1,6 @@
-﻿  main.cpp
+﻿  TimeDuration.cpp
   IonsGenerator.cpp
+  main.cpp
   Generating Code...
-  BarnesHut.vcxproj -> C:\Users\tony.zhao2\BarnesHut\x64\Debug\BarnesHut.exe
-  BarnesHut.vcxproj -> C:\Users\tony.zhao2\BarnesHut\x64\Debug\BarnesHut.pdb (Partial PDB)
+  BarnesHut.vcxproj -> C:\Users\enduser\Documents\BarnesHut\BarnesHut\x64\Debug\BarnesHut.exe
+  BarnesHut.vcxproj -> C:\Users\enduser\Documents\BarnesHut\BarnesHut\x64\Debug\BarnesHut.pdb (Partial PDB)

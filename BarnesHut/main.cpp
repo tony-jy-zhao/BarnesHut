@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include "IonsGenerator.h"
 #include "BHNode.h"
 #include "TimeDuration.h"
@@ -16,8 +17,8 @@ void main() {
 	double t1, t2;
 	TimeDuration td(1);
 	
-	MY_TYPE reElectricFieldsBF[MY_DIM * ION_NUM];
-	MY_TYPE reElectricFieldsBH[MY_DIM * ION_NUM];
+	MY_TYPE reElectricFieldsBF[MY_DIM * ION_NUM] = {0};
+	MY_TYPE reElectricFieldsBH[MY_DIM * ION_NUM] = {0};
 	t1 = td.calculateTime([&]() {
 		ig.calculateEveryElectricFieldsBF(reElectricFieldsBF);
 		});
@@ -35,7 +36,19 @@ void main() {
 	std::cout << t1 << std::endl << t2 << std::endl;
 
 	// check calculationError
-	for (int d = 0; d < MY_DIM; d++) {
-//		fabs(tarElectricField[d] - tarElectricFieldBF[d]);
+	std::ofstream myFile("diffBtwTwo.txt");
+	std::ofstream devFile("dev.txt");
+	if (myFile.is_open() && devFile.is_open()) {
+		for (int i = 0; i < MY_DIM * ION_NUM; i++) {
+			MY_TYPE x1 = reElectricFieldsBF[i];
+			MY_TYPE x2 = reElectricFieldsBH[i];
+			MY_TYPE dev = 2 * (x1 - x2) / (x1 + x2);
+			myFile << dev << "\n";
+			if (dev > 0.1) {
+				devFile << dev << "\t" << x1 << "\t" << x2 << "\n";
+			}
+		}
+		myFile.close();
+		devFile.close();
 	}
 }

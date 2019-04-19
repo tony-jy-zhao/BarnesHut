@@ -4,7 +4,7 @@
 
 #define MY_DIM 3
 typedef float MY_TYPE;
-const int ION_NUM = 500000;
+const int ION_NUM = 5000;
 const int BOX_SIDE_LENGTH = 50;
 
 template <typename T>

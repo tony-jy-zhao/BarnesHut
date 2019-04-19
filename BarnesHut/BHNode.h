@@ -2,7 +2,7 @@
 #include <vector>
 #include <assert.h>
 
-#define THRESHOLD2 (-1)
+#define THRESHOLD2 (1)
 #define MAX_DEPTH (INT_MAX)
 
 // Barnes-Hut Tree Node
@@ -174,6 +174,7 @@ private:
 		}
 	};
 
+	/*
 	void generateBoundary() {
 		for (int d = 0; d < D; d++) {
 			minPos_[d] = (MY_TYPE)BOX_SIDE_LENGTH;
@@ -189,6 +190,7 @@ private:
 			}
 		}
 	};
+	*/
 
     const int c_orthantNum_;
     const int c_allIonNum_;
